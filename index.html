@@ -1,0 +1,1334 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>HabitQuest - Gamified Habit Adventure</title>
+    <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        @keyframes levelUp {
+            0% { transform: scale(0) rotate(0deg); opacity: 0; }
+            50% { transform: scale(1.5) rotate(180deg); opacity: 1; }
+            100% { transform: scale(1) rotate(360deg); opacity: 1; }
+        }
+        @keyframes coinCollect {
+            0% { transform: translateY(0) scale(1); opacity: 1; }
+            100% { transform: translateY(-100px) scale(0.5); opacity: 0; }
+        }
+        @keyframes shake {
+            0%, 100% { transform: translateX(0); }
+            25% { transform: translateX(-5px); }
+            75% { transform: translateX(5px); }
+        }
+        @keyframes pulse {
+            0%, 100% { transform: scale(1); }
+            50% { transform: scale(1.05); }
+        }
+        @keyframes sparkle {
+            0%, 100% { opacity: 0; transform: scale(0); }
+            50% { opacity: 1; transform: scale(1); }
+        }
+        .level-up-animation { animation: levelUp 0.6s ease-out; }
+        .coin-collect { animation: coinCollect 0.8s ease-out forwards; }
+        .shake { animation: shake 0.5s ease-in-out; }
+        .pulse { animation: pulse 2s ease-in-out infinite; }
+        .sparkle { animation: sparkle 1s ease-in-out infinite; }
+        
+        .gradient-text {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+        
+        .glass-card {
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.3);
+        }
+        
+        .bottom-nav {
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            background: rgba(255, 255, 255, 0.98);
+            backdrop-filter: blur(20px);
+            border-top: 1px solid rgba(0, 0, 0, 0.1);
+            box-shadow: 0 -4px 20px rgba(0, 0, 0, 0.1);
+            z-index: 1000;
+        }
+        
+        .character-avatar {
+            width: 120px;
+            height: 120px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 60px;
+            position: relative;
+            box-shadow: 0 8px 25px rgba(102, 126, 234, 0.4);
+        }
+        
+        .xp-bar {
+            height: 24px;
+            background: linear-gradient(90deg, #667eea 0%, #764ba2 100%);
+            border-radius: 12px;
+            transition: width 0.5s ease-out;
+            position: relative;
+            overflow: hidden;
+        }
+        
+        .xp-bar::after {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: linear-gradient(90deg, transparent, rgba(255,255,255,0.3), transparent);
+            animation: shimmer 2s infinite;
+        }
+        
+        @keyframes shimmer {
+            0% { transform: translateX(-100%); }
+            100% { transform: translateX(100%); }
+        }
+        
+        .habit-card {
+            transition: all 0.3s ease;
+            transform-origin: center;
+        }
+        
+        .habit-card:active {
+            transform: scale(0.98);
+        }
+        
+        .achievement-badge {
+            background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+            border-radius: 50%;
+            width: 60px;
+            height: 60px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 28px;
+            box-shadow: 0 4px 15px rgba(245, 87, 108, 0.4);
+        }
+        
+        .quest-card {
+            background: linear-gradient(135deg, #ffecd2 0%, #fcb69f 100%);
+            border-radius: 16px;
+            padding: 16px;
+            margin-bottom: 12px;
+            box-shadow: 0 4px 15px rgba(252, 182, 159, 0.3);
+        }
+        
+        .power-up-card {
+            background: linear-gradient(135deg, #a8edea 0%, #fed6e3 100%);
+            border-radius: 16px;
+            padding: 12px;
+            margin-bottom: 8px;
+        }
+        
+        .mood-emoji {
+            font-size: 36px;
+            cursor: pointer;
+            transition: transform 0.2s;
+            filter: grayscale(100%);
+            opacity: 0.5;
+        }
+        
+        .mood-emoji.selected {
+            filter: grayscale(0%);
+            opacity: 1;
+            transform: scale(1.3);
+        }
+        
+        .mood-emoji:active {
+            transform: scale(0.9);
+        }
+        
+        .combo-counter {
+            background: linear-gradient(135deg, #ff9a9e 0%, #fecfef 100%);
+            border-radius: 20px;
+            padding: 8px 16px;
+            font-weight: bold;
+            color: #fff;
+            box-shadow: 0 4px 15px rgba(255, 154, 158, 0.4);
+        }
+        
+        @keyframes float {
+            0%, 100% { transform: translateY(0px); }
+            50% { transform: translateY(-10px); }
+        }
+        
+        .floating { animation: float 3s ease-in-out infinite; }
+        
+        .tab-content {
+            padding-bottom: 80px;
+        }
+        
+        .social-share-btn {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border-radius: 12px;
+            padding: 12px 24px;
+            font-weight: 600;
+            box-shadow: 0 4px 15px rgba(102, 126, 234, 0.4);
+        }
+        
+        .rarity-common { border-left: 4px solid #9ca3af; }
+        .rarity-rare { border-left: 4px solid #3b82f6; }
+        .rarity-epic { border-left: 4px solid #a855f7; }
+        .rarity-legendary { border-left: 4px solid #f59e0b; }
+    </style>
+</head>
+<body class="bg-gradient-to-br from-purple-100 via-pink-100 to-blue-100 min-h-screen pb-20">
+    
+    <!-- Main Container -->
+    <div class="max-w-md mx-auto">
+        
+        <!-- Home Tab -->
+        <div id="tab-home" class="tab-content p-4">
+            <!-- Character Profile -->
+            <div class="glass-card rounded-3xl p-6 mb-4 shadow-xl">
+                <div class="flex items-center justify-between mb-4">
+                    <div>
+                        <h2 class="text-2xl font-bold gradient-text">Quest Hero</h2>
+                        <p class="text-sm text-gray-600">Level <span id="playerLevel">1</span> Warrior</p>
+                    </div>
+                    <div class="character-avatar floating" id="characterAvatar">
+                        🦸‍♀️
+                    </div>
+                </div>
+                
+                <!-- XP Progress -->
+                <div class="mb-3">
+                    <div class="flex justify-between text-xs text-gray-600 mb-1">
+                        <span>XP</span>
+                        <span><span id="currentXP">0</span>/<span id="maxXP">100</span></span>
+                    </div>
+                    <div class="bg-gray-200 rounded-full h-6 overflow-hidden">
+                        <div class="xp-bar" id="xpBar" style="width: 0%">
+                            <span class="text-xs text-white font-bold flex items-center justify-center h-full"></span>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Stats Grid -->
+                <div class="grid grid-cols-3 gap-3 mt-4">
+                    <div class="bg-gradient-to-br from-yellow-400 to-orange-500 rounded-2xl p-3 text-center text-white shadow-lg">
+                        <div class="text-2xl mb-1">💰</div>
+                        <div class="text-xl font-bold" id="coinCount">0</div>
+                        <div class="text-xs opacity-90">Coins</div>
+                    </div>
+                    <div class="bg-gradient-to-br from-orange-400 to-red-500 rounded-2xl p-3 text-center text-white shadow-lg">
+                        <div class="text-2xl mb-1">🔥</div>
+                        <div class="text-xl font-bold" id="streakCount">0</div>
+                        <div class="text-xs opacity-90">Streak</div>
+                    </div>
+                    <div class="bg-gradient-to-br from-purple-400 to-pink-500 rounded-2xl p-3 text-center text-white shadow-lg">
+                        <div class="text-2xl mb-1">⚡</div>
+                        <div class="text-xl font-bold" id="comboCount">0</div>
+                        <div class="text-xs opacity-90">Combo</div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Daily Mood Tracker -->
+            <div class="glass-card rounded-3xl p-5 mb-4 shadow-xl">
+                <h3 class="text-lg font-bold text-gray-800 mb-3">How are you feeling?</h3>
+                <div class="flex justify-around" id="moodSelector">
+                    <span class="mood-emoji" data-mood="amazing" title="Amazing">🤩</span>
+                    <span class="mood-emoji" data-mood="happy" title="Happy">😊</span>
+                    <span class="mood-emoji" data-mood="okay" title="Okay">😐</span>
+                    <span class="mood-emoji" data-mood="sad" title="Sad">😔</span>
+                    <span class="mood-emoji" data-mood="stressed" title="Stressed">😰</span>
+                </div>
+                <div id="moodInsight" class="mt-3 text-sm text-gray-600 text-center hidden">
+                    <p class="italic"></p>
+                </div>
+            </div>
+            
+            <!-- Today's Quests (Habits) -->
+            <div class="glass-card rounded-3xl p-5 mb-4 shadow-xl">
+                <div class="flex justify-between items-center mb-4">
+                    <h3 class="text-lg font-bold text-gray-800">Today's Quests</h3>
+                    <div class="combo-counter" id="todayProgress">0/0</div>
+                </div>
+                <div id="todayHabits" class="space-y-3">
+                    <p class="text-gray-500 text-center py-4 text-sm">Start your first quest! 🎯</p>
+                </div>
+            </div>
+            
+            <!-- Active Challenges -->
+            <div class="glass-card rounded-3xl p-5 mb-4 shadow-xl">
+                <h3 class="text-lg font-bold text-gray-800 mb-3">🏆 Active Challenges</h3>
+                <div id="activeChallenges" class="space-y-2">
+                    <!-- Dynamic challenges will be added here -->
+                </div>
+            </div>
+            
+            <!-- Daily Rewards -->
+            <div class="glass-card rounded-3xl p-5 mb-4 shadow-xl">
+                <h3 class="text-lg font-bold text-gray-800 mb-3">🎁 Daily Rewards</h3>
+                <div class="grid grid-cols-7 gap-1">
+                    <div class="text-center" id="dailyRewards">
+                        <!-- Daily reward boxes -->
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Habits Tab -->
+        <div id="tab-habits" class="tab-content p-4 hidden">
+            <h2 class="text-2xl font-bold gradient-text mb-4">Create Quest</h2>
+            
+            <!-- Add Habit Form -->
+            <div class="glass-card rounded-3xl p-5 mb-4 shadow-xl">
+                <form id="habitForm" class="space-y-4">
+                    <div>
+                        <label class="block text-sm font-semibold text-gray-700 mb-2">Quest Name</label>
+                        <input type="text" id="habitName" required 
+                            class="w-full px-4 py-3 rounded-2xl border-2 border-gray-200 focus:border-purple-500 focus:outline-none"
+                            placeholder="Morning Workout">
+                    </div>
+                    
+                    <div>
+                        <label class="block text-sm font-semibold text-gray-700 mb-2">Choose Icon</label>
+                        <div class="grid grid-cols-6 gap-2" id="iconGrid">
+                            <button type="button" class="icon-btn text-3xl p-2 rounded-xl hover:bg-purple-100" data-icon="💪">💪</button>
+                            <button type="button" class="icon-btn text-3xl p-2 rounded-xl hover:bg-purple-100" data-icon="📚">📚</button>
+                            <button type="button" class="icon-btn text-3xl p-2 rounded-xl hover:bg-purple-100" data-icon="🧘">🧘</button>
+                            <button type="button" class="icon-btn text-3xl p-2 rounded-xl hover:bg-purple-100" data-icon="💧">💧</button>
+                            <button type="button" class="icon-btn text-3xl p-2 rounded-xl hover:bg-purple-100" data-icon="🥗">🥗</button>
+                            <button type="button" class="icon-btn text-3xl p-2 rounded-xl hover:bg-purple-100" data-icon="😴">😴</button>
+                            <button type="button" class="icon-btn text-3xl p-2 rounded-xl hover:bg-purple-100" data-icon="✍️">✍️</button>
+                            <button type="button" class="icon-btn text-3xl p-2 rounded-xl hover:bg-purple-100" data-icon="🎨">🎨</button>
+                            <button type="button" class="icon-btn text-3xl p-2 rounded-xl hover:bg-purple-100" data-icon="🎮">🎮</button>
+                            <button type="button" class="icon-btn text-3xl p-2 rounded-xl hover:bg-purple-100" data-icon="🏃">🏃</button>
+                            <button type="button" class="icon-btn text-3xl p-2 rounded-xl hover:bg-purple-100" data-icon="🚴">🚴</button>
+                            <button type="button" class="icon-btn text-3xl p-2 rounded-xl hover:bg-purple-100" data-icon="🎯">🎯</button>
+                        </div>
+                        <input type="hidden" id="selectedIcon" value="💪">
+                    </div>
+                    
+                    <div>
+                        <label class="block text-sm font-semibold text-gray-700 mb-2">Difficulty</label>
+                        <select id="habitDifficulty" class="w-full px-4 py-3 rounded-2xl border-2 border-gray-200 focus:border-purple-500 focus:outline-none">
+                            <option value="easy">Easy (10 XP, 5 Coins)</option>
+                            <option value="medium">Medium (25 XP, 15 Coins)</option>
+                            <option value="hard">Hard (50 XP, 30 Coins)</option>
+                            <option value="extreme">Extreme (100 XP, 60 Coins)</option>
+                        </select>
+                    </div>
+                    
+                    <div>
+                        <label class="block text-sm font-semibold text-gray-700 mb-2">Reminder Time</label>
+                        <input type="time" id="habitTime" 
+                            class="w-full px-4 py-3 rounded-2xl border-2 border-gray-200 focus:border-purple-500 focus:outline-none">
+                    </div>
+                    
+                    <button type="submit" class="w-full bg-gradient-to-r from-purple-600 to-pink-600 text-white py-4 rounded-2xl font-bold text-lg shadow-lg hover:shadow-xl transition">
+                        ✨ Create Quest
+                    </button>
+                </form>
+            </div>
+            
+            <!-- My Quests List -->
+            <div class="glass-card rounded-3xl p-5 mb-4 shadow-xl">
+                <h3 class="text-lg font-bold text-gray-800 mb-3">My Quests</h3>
+                <div id="habitsList" class="space-y-3">
+                    <p class="text-gray-500 text-center py-4 text-sm">No quests yet</p>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Shop Tab -->
+        <div id="tab-shop" class="tab-content p-4 hidden">
+            <h2 class="text-2xl font-bold gradient-text mb-4">Power-Up Shop</h2>
+            
+            <!-- Coins Display -->
+            <div class="glass-card rounded-3xl p-5 mb-4 shadow-xl text-center">
+                <div class="text-5xl mb-2">💰</div>
+                <div class="text-3xl font-bold gradient-text" id="shopCoinDisplay">0</div>
+                <div class="text-sm text-gray-600">Available Coins</div>
+            </div>
+            
+            <!-- Power-ups -->
+            <div class="glass-card rounded-3xl p-5 mb-4 shadow-xl">
+                <h3 class="text-lg font-bold text-gray-800 mb-3">⚡ Power-Ups</h3>
+                <div id="powerUpsList" class="space-y-3">
+                    <!-- Power-ups will be dynamically added -->
+                </div>
+            </div>
+            
+            <!-- Avatar Customization -->
+            <div class="glass-card rounded-3xl p-5 mb-4 shadow-xl">
+                <h3 class="text-lg font-bold text-gray-800 mb-3">👤 Avatar Shop</h3>
+                <div id="avatarShop" class="grid grid-cols-4 gap-3">
+                    <!-- Avatars will be dynamically added -->
+                </div>
+            </div>
+            
+            <!-- Theme Shop -->
+            <div class="glass-card rounded-3xl p-5 mb-4 shadow-xl">
+                <h3 class="text-lg font-bold text-gray-800 mb-3">🎨 Theme Shop</h3>
+                <div id="themeShop" class="space-y-2">
+                    <!-- Themes will be dynamically added -->
+                </div>
+            </div>
+        </div>
+        
+        <!-- Stats Tab -->
+        <div id="tab-stats" class="tab-content p-4 hidden">
+            <h2 class="text-2xl font-bold gradient-text mb-4">Your Journey</h2>
+            
+            <!-- Achievements -->
+            <div class="glass-card rounded-3xl p-5 mb-4 shadow-xl">
+                <h3 class="text-lg font-bold text-gray-800 mb-3">🏆 Achievements</h3>
+                <div id="achievementsList" class="grid grid-cols-3 gap-3">
+                    <!-- Achievements will be dynamically added -->
+                </div>
+            </div>
+            
+            <!-- Statistics -->
+            <div class="glass-card rounded-3xl p-5 mb-4 shadow-xl">
+                <h3 class="text-lg font-bold text-gray-800 mb-3">📊 Statistics</h3>
+                <div class="space-y-3">
+                    <div class="flex justify-between items-center py-2 border-b border-gray-200">
+                        <span class="text-gray-600">Total Quests Completed</span>
+                        <span class="font-bold text-purple-600" id="statTotalCompleted">0</span>
+                    </div>
+                    <div class="flex justify-between items-center py-2 border-b border-gray-200">
+                        <span class="text-gray-600">Perfect Days</span>
+                        <span class="font-bold text-green-600" id="statPerfectDays">0</span>
+                    </div>
+                    <div class="flex justify-between items-center py-2 border-b border-gray-200">
+                        <span class="text-gray-600">Longest Streak</span>
+                        <span class="font-bold text-orange-600" id="statLongestStreak">0 🔥</span>
+                    </div>
+                    <div class="flex justify-between items-center py-2 border-b border-gray-200">
+                        <span class="text-gray-600">Success Rate</span>
+                        <span class="font-bold text-blue-600" id="statSuccessRate">0%</span>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Progress Charts -->
+            <div class="glass-card rounded-3xl p-5 mb-4 shadow-xl">
+                <h3 class="text-lg font-bold text-gray-800 mb-3">📈 7-Day Progress</h3>
+                <canvas id="weekChart" class="w-full"></canvas>
+            </div>
+            
+            <!-- Mood Tracker -->
+            <div class="glass-card rounded-3xl p-5 mb-4 shadow-xl">
+                <h3 class="text-lg font-bold text-gray-800 mb-3">😊 Mood Trends</h3>
+                <canvas id="moodChart" class="w-full"></canvas>
+            </div>
+            
+            <!-- Share Progress -->
+            <div class="glass-card rounded-3xl p-5 mb-4 shadow-xl text-center">
+                <h3 class="text-lg font-bold text-gray-800 mb-3">Share Your Progress</h3>
+                <button onclick="shareProgress()" class="social-share-btn w-full">
+                    📱 Share Achievement
+                </button>
+            </div>
+        </div>
+        
+    </div>
+    
+    <!-- Bottom Navigation -->
+    <div class="bottom-nav">
+        <div class="max-w-md mx-auto">
+            <div class="flex justify-around items-center py-3 px-2">
+                <button onclick="switchTab('home')" class="nav-btn flex flex-col items-center gap-1 px-4 py-2 rounded-xl transition active">
+                    <span class="text-2xl">🏠</span>
+                    <span class="text-xs font-semibold">Home</span>
+                </button>
+                <button onclick="switchTab('habits')" class="nav-btn flex flex-col items-center gap-1 px-4 py-2 rounded-xl transition">
+                    <span class="text-2xl">⚔️</span>
+                    <span class="text-xs font-semibold">Quests</span>
+                </button>
+                <button onclick="switchTab('shop')" class="nav-btn flex flex-col items-center gap-1 px-4 py-2 rounded-xl transition">
+                    <span class="text-2xl">🏪</span>
+                    <span class="text-xs font-semibold">Shop</span>
+                </button>
+                <button onclick="switchTab('stats')" class="nav-btn flex flex-col items-center gap-1 px-4 py-2 rounded-xl transition">
+                    <span class="text-2xl">📊</span>
+                    <span class="text-xs font-semibold">Stats</span>
+                </button>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Floating Notifications -->
+    <div id="floatingNotifications" class="fixed top-4 left-4 right-4 z-50 pointer-events-none"></div>
+    
+    <script>
+        // Game State
+        let gameState = {
+            player: {
+                level: 1,
+                xp: 0,
+                coins: 0,
+                avatar: '🦸‍♀️',
+                unlockedAvatars: ['🦸‍♀️'],
+                currentTheme: 'default'
+            },
+            habits: [],
+            completions: {},
+            mood: {},
+            streak: 0,
+            combo: 0,
+            achievements: [],
+            powerUps: [],
+            challenges: []
+        };
+        
+        // XP and Rewards by Difficulty
+        const rewards = {
+            easy: { xp: 10, coins: 5 },
+            medium: { xp: 25, coins: 15 },
+            hard: { xp: 50, coins: 30 },
+            extreme: { xp: 100, coins: 60 }
+        };
+        
+        // Achievements System
+        const achievementsList = [
+            { id: 'first_quest', name: 'First Quest', icon: '🎯', description: 'Complete your first habit', requirement: 1 },
+            { id: 'streak_3', name: '3 Day Warrior', icon: '🔥', description: '3 day streak', requirement: 3 },
+            { id: 'streak_7', name: 'Week Champion', icon: '⭐', description: '7 day streak', requirement: 7 },
+            { id: 'streak_30', name: 'Monthly Legend', icon: '👑', description: '30 day streak', requirement: 30 },
+            { id: 'level_5', name: 'Rising Star', icon: '🌟', description: 'Reach level 5', requirement: 5 },
+            { id: 'level_10', name: 'Master', icon: '💎', description: 'Reach level 10', requirement: 10 },
+            { id: 'rich', name: 'Wealthy', icon: '💰', description: 'Earn 500 coins', requirement: 500 },
+            { id: 'perfect_week', name: 'Perfect Week', icon: '✨', description: 'Complete all habits for 7 days', requirement: 7 },
+            { id: 'early_bird', name: 'Early Bird', icon: '🌅', description: 'Complete a habit before 8 AM', requirement: 1 }
+        ];
+        
+        // Power-ups
+        const powerUps = [
+            { id: 'freeze', name: 'Streak Freeze', icon: '❄️', cost: 50, description: 'Protect your streak for 1 day', rarity: 'rare' },
+            { id: 'double_xp', name: 'Double XP', icon: '⚡', cost: 100, description: '2x XP for 24 hours', rarity: 'epic' },
+            { id: 'double_coins', name: 'Double Coins', icon: '💎', cost: 100, description: '2x Coins for 24 hours', rarity: 'epic' },
+            { id: 'auto_complete', name: 'Auto Complete', icon: '🤖', cost: 200, description: 'Auto-complete one habit', rarity: 'legendary' }
+        ];
+        
+        // Avatar Shop
+        const avatars = [
+            { emoji: '🦸‍♀️', cost: 0, unlocked: true },
+            { emoji: '🧙‍♂️', cost: 100, unlocked: false },
+            { emoji: '🥷', cost: 150, unlocked: false },
+            { emoji: '👨‍🚀', cost: 200, unlocked: false },
+            { emoji: '🧛', cost: 250, unlocked: false },
+            { emoji: '🤴', cost: 300, unlocked: false },
+            { emoji: '👸', cost: 300, unlocked: false },
+            { emoji: '🦄', cost: 500, unlocked: false }
+        ];
+        
+        // Initialize
+        document.addEventListener('DOMContentLoaded', () => {
+            loadGameState();
+            initializeUI();
+            setupEventListeners();
+            renderAll();
+            checkDailyReset();
+            initializeChallenges();
+        });
+        
+        // Load game state from localStorage
+        function loadGameState() {
+            const saved = localStorage.getItem('habitQuestState');
+            if (saved) {
+                gameState = { ...gameState, ...JSON.parse(saved) };
+            }
+        }
+        
+        // Save game state
+        function saveGameState() {
+            localStorage.setItem('habitQuestState', JSON.stringify(gameState));
+        }
+        
+        // Initialize UI
+        function initializeUI() {
+            updatePlayerStats();
+            renderDailyRewards();
+            renderPowerUps();
+            renderAvatarShop();
+            renderAchievements();
+        }
+        
+        // Setup Event Listeners
+        function setupEventListeners() {
+            // Icon selection
+            document.querySelectorAll('.icon-btn').forEach(btn => {
+                btn.addEventListener('click', (e) => {
+                    e.preventDefault();
+                    document.querySelectorAll('.icon-btn').forEach(b => b.classList.remove('bg-purple-200'));
+                    btn.classList.add('bg-purple-200');
+                    document.getElementById('selectedIcon').value = btn.dataset.icon;
+                });
+            });
+            
+            // Habit form
+            document.getElementById('habitForm').addEventListener('submit', (e) => {
+                e.preventDefault();
+                createHabit();
+            });
+            
+            // Mood selector
+            document.querySelectorAll('.mood-emoji').forEach(emoji => {
+                emoji.addEventListener('click', () => selectMood(emoji));
+            });
+        }
+        
+        // Create Habit
+        function createHabit() {
+            const habit = {
+                id: Date.now().toString(),
+                name: document.getElementById('habitName').value,
+                icon: document.getElementById('selectedIcon').value,
+                difficulty: document.getElementById('habitDifficulty').value,
+                time: document.getElementById('habitTime').value,
+                createdAt: new Date().toISOString(),
+                streak: 0
+            };
+            
+            gameState.habits.push(habit);
+            saveGameState();
+            
+            showNotification('Quest Created! 🎉', 'success');
+            document.getElementById('habitForm').reset();
+            document.querySelectorAll('.icon-btn').forEach(b => b.classList.remove('bg-purple-200'));
+            document.querySelectorAll('.icon-btn')[0].classList.add('bg-purple-200');
+            
+            renderAll();
+            switchTab('home');
+        }
+        
+        // Complete Habit
+        function completeHabit(habitId) {
+            const today = getToday();
+            if (!gameState.completions[today]) {
+                gameState.completions[today] = [];
+            }
+            
+            // Check if already completed
+            if (gameState.completions[today].includes(habitId)) {
+                return;
+            }
+            
+            const habit = gameState.habits.find(h => h.id === habitId);
+            const reward = rewards[habit.difficulty];
+            
+            // Add completion
+            gameState.completions[today].push(habitId);
+            
+            // Award XP and Coins
+            addXP(reward.xp);
+            addCoins(reward.coins);
+            
+            // Update combo
+            gameState.combo++;
+            
+            // Update streak
+            updateStreak();
+            
+            // Check achievements
+            checkAchievements();
+            
+            // Show reward animation
+            showRewardAnimation(reward);
+            
+            saveGameState();
+            renderAll();
+        }
+        
+        // Add XP
+        function addXP(amount) {
+            const multiplier = gameState.powerUps.find(p => p.id === 'double_xp' && p.active) ? 2 : 1;
+            gameState.player.xp += amount * multiplier;
+            
+            // Level up check
+            const xpNeeded = gameState.player.level * 100;
+            if (gameState.player.xp >= xpNeeded) {
+                levelUp();
+            }
+            
+            updatePlayerStats();
+        }
+        
+        // Add Coins
+        function addCoins(amount) {
+            const multiplier = gameState.powerUps.find(p => p.id === 'double_coins' && p.active) ? 2 : 1;
+            gameState.player.coins += amount * multiplier;
+            updatePlayerStats();
+        }
+        
+        // Level Up
+        function levelUp() {
+            gameState.player.level++;
+            gameState.player.xp = 0;
+            
+            showNotification(`🎉 Level Up! You are now Level ${gameState.player.level}!`, 'legendary');
+            
+            // Level up animation
+            const avatar = document.getElementById('characterAvatar');
+            avatar.classList.add('level-up-animation');
+            setTimeout(() => avatar.classList.remove('level-up-animation'), 600);
+            
+            updatePlayerStats();
+            checkAchievements();
+        }
+        
+        // Update Player Stats
+        function updatePlayerStats() {
+            document.getElementById('playerLevel').textContent = gameState.player.level;
+            document.getElementById('currentXP').textContent = gameState.player.xp;
+            
+            const maxXP = gameState.player.level * 100;
+            document.getElementById('maxXP').textContent = maxXP;
+            
+            const xpPercent = (gameState.player.xp / maxXP) * 100;
+            document.getElementById('xpBar').style.width = xpPercent + '%';
+            
+            document.getElementById('coinCount').textContent = gameState.player.coins;
+            document.getElementById('shopCoinDisplay').textContent = gameState.player.coins;
+            document.getElementById('streakCount').textContent = gameState.streak;
+            document.getElementById('comboCount').textContent = gameState.combo;
+            
+            document.getElementById('characterAvatar').textContent = gameState.player.avatar;
+        }
+        
+        // Update Streak
+        function updateStreak() {
+            const today = getToday();
+            const yesterday = getYesterday();
+            
+            const todayComplete = gameState.completions[today]?.length > 0;
+            const yesterdayComplete = gameState.completions[yesterday]?.length > 0;
+            
+            if (todayComplete && yesterdayComplete) {
+                gameState.streak++;
+            } else if (todayComplete && !yesterdayComplete) {
+                // Check if freeze is active
+                const freeze = gameState.powerUps.find(p => p.id === 'freeze' && p.active);
+                if (!freeze) {
+                    gameState.streak = 1;
+                }
+            }
+            
+            updatePlayerStats();
+        }
+        
+        // Mood Selection
+        function selectMood(emojiElement) {
+            document.querySelectorAll('.mood-emoji').forEach(e => e.classList.remove('selected'));
+            emojiElement.classList.add('selected');
+            
+            const mood = emojiElement.dataset.mood;
+            const today = getToday();
+            gameState.mood[today] = mood;
+            
+            const insights = {
+                amazing: "You're on fire! Keep up the amazing energy! 🔥",
+                happy: "Great vibes! A happy mind builds great habits! 😊",
+                okay: "Every journey has its ups and downs. You've got this! 💪",
+                sad: "Be kind to yourself. Small steps count too. 🌱",
+                stressed: "Take a deep breath. Focus on one thing at a time. 🧘"
+            };
+            
+            const insightDiv = document.getElementById('moodInsight');
+            insightDiv.querySelector('p').textContent = insights[mood];
+            insightDiv.classList.remove('hidden');
+            
+            saveGameState();
+        }
+        
+        // Render Today's Habits
+        function renderTodayHabits() {
+            const container = document.getElementById('todayHabits');
+            const today = getToday();
+            const completed = gameState.completions[today] || [];
+            
+            if (gameState.habits.length === 0) {
+                container.innerHTML = '<p class="text-gray-500 text-center py-4 text-sm">Start your first quest! 🎯</p>';
+                document.getElementById('todayProgress').textContent = '0/0';
+                return;
+            }
+            
+            document.getElementById('todayProgress').textContent = `${completed.length}/${gameState.habits.length}`;
+            
+            container.innerHTML = gameState.habits.map(habit => {
+                const isCompleted = completed.includes(habit.id);
+                const reward = rewards[habit.difficulty];
+                
+                return `
+                    <div class="habit-card ${isCompleted ? 'opacity-60' : ''} bg-gradient-to-r from-purple-500 to-pink-500 rounded-2xl p-4 shadow-lg">
+                        <div class="flex items-center justify-between">
+                            <div class="flex items-center gap-3 flex-1">
+                                <div class="text-4xl">${habit.icon}</div>
+                                <div class="text-white flex-1">
+                                    <div class="font-bold text-lg">${habit.name}</div>
+                                    <div class="text-xs opacity-90">+${reward.xp} XP | +${reward.coins} Coins</div>
+                                </div>
+                            </div>
+                            <button 
+                                onclick="completeHabit('${habit.id}')"
+                                ${isCompleted ? 'disabled' : ''}
+                                class="px-5 py-3 rounded-xl font-bold transition ${isCompleted ? 'bg-green-400 text-white' : 'bg-white text-purple-600 hover:scale-105'} shadow-lg">
+                                ${isCompleted ? '✓' : 'Do It!'}
+                            </button>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+        }
+        
+        // Render Habits List
+        function renderHabitsList() {
+            const container = document.getElementById('habitsList');
+            
+            if (gameState.habits.length === 0) {
+                container.innerHTML = '<p class="text-gray-500 text-center py-4 text-sm">No quests yet</p>';
+                return;
+            }
+            
+            container.innerHTML = gameState.habits.map(habit => {
+                const reward = rewards[habit.difficulty];
+                return `
+                    <div class="bg-white rounded-2xl p-4 shadow-md border-2 border-purple-200">
+                        <div class="flex items-center justify-between">
+                            <div class="flex items-center gap-3 flex-1">
+                                <div class="text-3xl">${habit.icon}</div>
+                                <div class="flex-1">
+                                    <div class="font-bold text-gray-800">${habit.name}</div>
+                                    <div class="text-xs text-gray-600">${habit.difficulty.toUpperCase()} • ${reward.xp} XP • ${reward.coins} Coins</div>
+                                    ${habit.time ? `<div class="text-xs text-purple-600">⏰ ${habit.time}</div>` : ''}
+                                </div>
+                            </div>
+                            <button onclick="deleteHabit('${habit.id}')" class="text-red-500 px-3 py-2 rounded-lg hover:bg-red-50">
+                                🗑️
+                            </button>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+        }
+        
+        // Delete Habit
+        function deleteHabit(habitId) {
+            if (confirm('Delete this quest?')) {
+                gameState.habits = gameState.habits.filter(h => h.id !== habitId);
+                saveGameState();
+                renderAll();
+                showNotification('Quest deleted', 'info');
+            }
+        }
+        
+        // Render Daily Rewards
+        function renderDailyRewards() {
+            const container = document.getElementById('dailyRewards');
+            const today = getToday();
+            
+            let html = '';
+            for (let i = 0; i < 7; i++) {
+                const date = new Date();
+                date.setDate(date.getDate() - (6 - i));
+                const dateStr = getDateString(date);
+                const hasCompletion = gameState.completions[dateStr]?.length > 0;
+                const isToday = dateStr === today;
+                
+                html += `
+                    <div class="flex flex-col items-center">
+                        <div class="w-10 h-10 rounded-lg ${isToday ? 'bg-blue-500 ring-2 ring-blue-300' : hasCompletion ? 'bg-green-500' : 'bg-gray-300'} flex items-center justify-center text-white font-bold text-sm mb-1">
+                            ${hasCompletion ? '✓' : ''}
+                        </div>
+                        <div class="text-xs text-gray-600">${['S','M','T','W','T','F','S'][date.getDay()]}</div>
+                    </div>
+                `;
+            }
+            container.innerHTML = html;
+        }
+        
+        // Initialize Challenges
+        function initializeChallenges() {
+            if (gameState.challenges.length === 0) {
+                gameState.challenges = [
+                    { id: 'daily_3', name: 'Complete 3 habits today', progress: 0, target: 3, reward: 30, active: true },
+                    { id: 'week_streak', name: 'Maintain 7-day streak', progress: gameState.streak, target: 7, reward: 100, active: true },
+                    { id: 'perfect_day', name: 'Complete all habits', progress: 0, target: 1, reward: 50, active: true }
+                ];
+            }
+            renderChallenges();
+        }
+        
+        // Render Challenges
+        function renderChallenges() {
+            const container = document.getElementById('activeChallenges');
+            const today = getToday();
+            const completed = gameState.completions[today]?.length || 0;
+            
+            // Update challenge progress
+            gameState.challenges.forEach(challenge => {
+                if (challenge.id === 'daily_3') {
+                    challenge.progress = completed;
+                } else if (challenge.id === 'week_streak') {
+                    challenge.progress = gameState.streak;
+                } else if (challenge.id === 'perfect_day') {
+                    challenge.progress = completed === gameState.habits.length && gameState.habits.length > 0 ? 1 : 0;
+                }
+            });
+            
+            container.innerHTML = gameState.challenges.map(challenge => {
+                const percent = Math.min((challenge.progress / challenge.target) * 100, 100);
+                const isComplete = challenge.progress >= challenge.target;
+                
+                return `
+                    <div class="quest-card">
+                        <div class="flex justify-between items-center mb-2">
+                            <div class="font-bold text-gray-800 text-sm">${challenge.name}</div>
+                            <div class="text-yellow-600 font-bold text-sm">💰 ${challenge.reward}</div>
+                        </div>
+                        <div class="bg-white/50 rounded-full h-3 overflow-hidden">
+                            <div class="bg-gradient-to-r from-green-400 to-green-600 h-full transition-all" style="width: ${percent}%"></div>
+                        </div>
+                        <div class="text-xs text-gray-600 mt-1">${challenge.progress}/${challenge.target}</div>
+                    </div>
+                `;
+            }).join('');
+        }
+        
+        // Render Power-ups
+        function renderPowerUps() {
+            const container = document.getElementById('powerUpsList');
+            
+            container.innerHTML = powerUps.map(powerUp => {
+                return `
+                    <div class="power-up-card rarity-${powerUp.rarity}">
+                        <div class="flex items-center justify-between">
+                            <div class="flex items-center gap-3 flex-1">
+                                <div class="text-3xl">${powerUp.icon}</div>
+                                <div class="flex-1">
+                                    <div class="font-bold text-gray-800 text-sm">${powerUp.name}</div>
+                                    <div class="text-xs text-gray-600">${powerUp.description}</div>
+                                </div>
+                            </div>
+                            <button onclick="buyPowerUp('${powerUp.id}')" class="bg-yellow-500 text-white px-4 py-2 rounded-xl font-bold text-sm hover:bg-yellow-600 transition">
+                                ${powerUp.cost} 💰
+                            </button>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+        }
+        
+        // Buy Power-up
+        function buyPowerUp(powerUpId) {
+            const powerUp = powerUps.find(p => p.id === powerUpId);
+            
+            if (gameState.player.coins >= powerUp.cost) {
+                gameState.player.coins -= powerUp.cost;
+                
+                // Activate power-up
+                gameState.powerUps.push({
+                    id: powerUpId,
+                    activatedAt: Date.now(),
+                    active: true
+                });
+                
+                saveGameState();
+                updatePlayerStats();
+                showNotification(`${powerUp.icon} ${powerUp.name} activated!`, 'legendary');
+            } else {
+                showNotification('Not enough coins!', 'error');
+            }
+        }
+        
+        // Render Avatar Shop
+        function renderAvatarShop() {
+            const container = document.getElementById('avatarShop');
+            
+            container.innerHTML = avatars.map(avatar => {
+                const isUnlocked = gameState.player.unlockedAvatars.includes(avatar.emoji);
+                const isCurrent = gameState.player.avatar === avatar.emoji;
+                
+                return `
+                    <button 
+                        onclick="selectAvatar('${avatar.emoji}', ${avatar.cost})"
+                        class="text-5xl p-4 rounded-2xl ${isCurrent ? 'bg-purple-200 ring-4 ring-purple-400' : isUnlocked ? 'bg-white hover:bg-gray-100' : 'bg-gray-200 opacity-50'} transition shadow-lg">
+                        ${avatar.emoji}
+                        ${!isUnlocked ? `<div class="text-xs text-gray-600">${avatar.cost} 💰</div>` : ''}
+                    </button>
+                `;
+            }).join('');
+        }
+        
+        // Select Avatar
+        function selectAvatar(emoji, cost) {
+            const isUnlocked = gameState.player.unlockedAvatars.includes(emoji);
+            
+            if (!isUnlocked) {
+                if (gameState.player.coins >= cost) {
+                    gameState.player.coins -= cost;
+                    gameState.player.unlockedAvatars.push(emoji);
+                    gameState.player.avatar = emoji;
+                    saveGameState();
+                    updatePlayerStats();
+                    renderAvatarShop();
+                    showNotification('Avatar unlocked! 🎉', 'success');
+                } else {
+                    showNotification('Not enough coins!', 'error');
+                }
+            } else {
+                gameState.player.avatar = emoji;
+                saveGameState();
+                updatePlayerStats();
+                renderAvatarShop();
+                showNotification('Avatar changed!', 'info');
+            }
+        }
+        
+        // Render Achievements
+        function renderAchievements() {
+            const container = document.getElementById('achievementsList');
+            
+            container.innerHTML = achievementsList.map(achievement => {
+                const isUnlocked = gameState.achievements.includes(achievement.id);
+                
+                return `
+                    <div class="text-center">
+                        <div class="achievement-badge ${isUnlocked ? '' : 'grayscale opacity-50'}">
+                            ${achievement.icon}
+                        </div>
+                        <div class="text-xs text-gray-600 mt-1">${achievement.name}</div>
+                    </div>
+                `;
+            }).join('');
+        }
+        
+        // Check Achievements
+        function checkAchievements() {
+            let newAchievements = [];
+            
+            // Count total completions
+            let totalCompletions = 0;
+            for (let date in gameState.completions) {
+                totalCompletions += gameState.completions[date].length;
+            }
+            
+            achievementsList.forEach(achievement => {
+                if (gameState.achievements.includes(achievement.id)) return;
+                
+                let unlocked = false;
+                
+                switch(achievement.id) {
+                    case 'first_quest':
+                        unlocked = totalCompletions >= 1;
+                        break;
+                    case 'streak_3':
+                        unlocked = gameState.streak >= 3;
+                        break;
+                    case 'streak_7':
+                        unlocked = gameState.streak >= 7;
+                        break;
+                    case 'streak_30':
+                        unlocked = gameState.streak >= 30;
+                        break;
+                    case 'level_5':
+                        unlocked = gameState.player.level >= 5;
+                        break;
+                    case 'level_10':
+                        unlocked = gameState.player.level >= 10;
+                        break;
+                    case 'rich':
+                        unlocked = gameState.player.coins >= 500;
+                        break;
+                }
+                
+                if (unlocked) {
+                    gameState.achievements.push(achievement.id);
+                    newAchievements.push(achievement);
+                }
+            });
+            
+            if (newAchievements.length > 0) {
+                newAchievements.forEach(achievement => {
+                    showNotification(`🏆 Achievement Unlocked: ${achievement.name}!`, 'legendary');
+                });
+                renderAchievements();
+            }
+        }
+        
+        // Render Statistics
+        function renderStatistics() {
+            let totalCompletions = 0;
+            let perfectDays = 0;
+            let longestStreak = 0;
+            
+            for (let date in gameState.completions) {
+                const dayCompletions = gameState.completions[date].length;
+                totalCompletions += dayCompletions;
+                
+                if (dayCompletions === gameState.habits.length && gameState.habits.length > 0) {
+                    perfectDays++;
+                }
+            }
+            
+            longestStreak = gameState.streak; // Simplified
+            
+            const activeDays = Object.keys(gameState.completions).length;
+            const possibleCompletions = activeDays * gameState.habits.length;
+            const successRate = possibleCompletions > 0 ? Math.round((totalCompletions / possibleCompletions) * 100) : 0;
+            
+            document.getElementById('statTotalCompleted').textContent = totalCompletions;
+            document.getElementById('statPerfectDays').textContent = perfectDays;
+            document.getElementById('statLongestStreak').textContent = longestStreak + ' 🔥';
+            document.getElementById('statSuccessRate').textContent = successRate + '%';
+            
+            renderWeekChart();
+            renderMoodChart();
+        }
+        
+        // Render Week Chart
+        function renderWeekChart() {
+            const ctx = document.getElementById('weekChart');
+            const labels = [];
+            const data = [];
+            
+            for (let i = 6; i >= 0; i--) {
+                const date = new Date();
+                date.setDate(date.getDate() - i);
+                labels.push(['Sun','Mon','Tue','Wed','Thu','Fri','Sat'][date.getDay()]);
+                
+                const dateStr = getDateString(date);
+                data.push(gameState.completions[dateStr]?.length || 0);
+            }
+            
+            new Chart(ctx, {
+                type: 'bar',
+                data: {
+                    labels: labels,
+                    datasets: [{
+                        label: 'Quests Completed',
+                        data: data,
+                        backgroundColor: 'rgba(147, 51, 234, 0.8)',
+                        borderRadius: 8
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: true,
+                    plugins: { legend: { display: false } },
+                    scales: {
+                        y: { beginAtZero: true, ticks: { stepSize: 1 } }
+                    }
+                }
+            });
+        }
+        
+        // Render Mood Chart
+        function renderMoodChart() {
+            const ctx = document.getElementById('moodChart');
+            const moodColors = {
+                amazing: '#10b981',
+                happy: '#3b82f6',
+                okay: '#6b7280',
+                sad: '#8b5cf6',
+                stressed: '#ef4444'
+            };
+            
+            const labels = [];
+            const data = [];
+            const colors = [];
+            
+            for (let i = 6; i >= 0; i--) {
+                const date = new Date();
+                date.setDate(date.getDate() - i);
+                labels.push(['Sun','Mon','Tue','Wed','Thu','Fri','Sat'][date.getDay()]);
+                
+                const dateStr = getDateString(date);
+                const mood = gameState.mood[dateStr] || 'okay';
+                const moodValues = { amazing: 5, happy: 4, okay: 3, sad: 2, stressed: 1 };
+                data.push(moodValues[mood]);
+                colors.push(moodColors[mood]);
+            }
+            
+            new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: labels,
+                    datasets: [{
+                        label: 'Mood',
+                        data: data,
+                        borderColor: '#8b5cf6',
+                        backgroundColor: 'rgba(139, 92, 246, 0.1)',
+                        tension: 0.4,
+                        fill: true,
+                        pointBackgroundColor: colors,
+                        pointRadius: 6
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: true,
+                    plugins: { legend: { display: false } },
+                    scales: {
+                        y: { 
+                            beginAtZero: true, 
+                            max: 5,
+                            ticks: { 
+                                stepSize: 1,
+                                callback: function(value) {
+                                    const labels = { 1: '😰', 2: '😔', 3: '😐', 4: '😊', 5: '🤩' };
+                                    return labels[value] || '';
+                                }
+                            }
+                        }
+                    }
+                }
+            });
+        }
+        
+        // Share Progress
+        function shareProgress() {
+            const shareText = `🎮 HabitQuest Update!\n\n🏆 Level ${gameState.player.level}\n🔥 ${gameState.streak} Day Streak\n💰 ${gameState.player.coins} Coins\n⭐ ${gameState.achievements.length} Achievements\n\nJoin me on the habit journey!`;
+            
+            if (navigator.share) {
+                navigator.share({
+                    title: 'HabitQuest Progress',
+                    text: shareText
+                });
+            } else {
+                navigator.clipboard.writeText(shareText);
+                showNotification('Progress copied to clipboard!', 'success');
+            }
+        }
+        
+        // Tab Switching
+        function switchTab(tabName) {
+            const tabs = ['home', 'habits', 'shop', 'stats'];
+            tabs.forEach(tab => {
+                const content = document.getElementById(`tab-${tab}`);
+                content.classList.toggle('hidden', tab !== tabName);
+            });
+            
+            document.querySelectorAll('.nav-btn').forEach(btn => {
+                btn.classList.remove('active', 'bg-purple-100', 'text-purple-600');
+            });
+            
+            event.currentTarget.classList.add('active', 'bg-purple-100', 'text-purple-600');
+            
+            if (tabName === 'stats') {
+                renderStatistics();
+            }
+        }
+        
+        // Render All
+        function renderAll() {
+            renderTodayHabits();
+            renderHabitsList();
+            renderDailyRewards();
+            renderChallenges();
+            updatePlayerStats();
+        }
+        
+        // Show Notification
+        function showNotification(message, type = 'info') {
+            const container = document.getElementById('floatingNotifications');
+            const notification = document.createElement('div');
+            
+            const colors = {
+                success: 'from-green-500 to-green-600',
+                error: 'from-red-500 to-red-600',
+                info: 'from-blue-500 to-blue-600',
+                legendary: 'from-yellow-500 to-orange-600'
+            };
+            
+            notification.className = `bg-gradient-to-r ${colors[type]} text-white px-6 py-4 rounded-2xl shadow-2xl mb-3 pointer-events-auto font-bold`;
+            notification.textContent = message;
+            notification.style.animation = 'slideInRight 0.3s ease-out';
+            
+            container.appendChild(notification);
+            
+            setTimeout(() => {
+                notification.style.animation = 'slideOutRight 0.3s ease-out';
+                setTimeout(() => notification.remove(), 300);
+            }, 3000);
+        }
+        
+        // Show Reward Animation
+        function showRewardAnimation(reward) {
+            const container = document.getElementById('floatingNotifications');
+            
+            // XP Animation
+            const xpElement = document.createElement('div');
+            xpElement.className = 'text-4xl font-bold text-purple-600 coin-collect pointer-events-auto';
+            xpElement.textContent = `+${reward.xp} XP`;
+            xpElement.style.position = 'absolute';
+            xpElement.style.left = '50%';
+            xpElement.style.transform = 'translateX(-50%)';
+            container.appendChild(xpElement);
+            setTimeout(() => xpElement.remove(), 1000);
+            
+            // Coin Animation
+            setTimeout(() => {
+                const coinElement = document.createElement('div');
+                coinElement.className = 'text-4xl font-bold text-yellow-600 coin-collect pointer-events-auto';
+                coinElement.textContent = `+${reward.coins} 💰`;
+                coinElement.style.position = 'absolute';
+                coinElement.style.left = '50%';
+                coinElement.style.transform = 'translateX(-50%)';
+                container.appendChild(coinElement);
+                setTimeout(() => coinElement.remove(), 1000);
+            }, 200);
+        }
+        
+        // Check Daily Reset
+        function checkDailyReset() {
+            const lastCheck = localStorage.getItem('lastCheck');
+            const today = getToday();
+            
+            if (lastCheck !== today) {
+                // Reset combo
+                gameState.combo = 0;
+                
+                // Deactivate expired power-ups
+                gameState.powerUps = gameState.powerUps.filter(p => {
+                    const hoursSinceActivation = (Date.now() - p.activatedAt) / (1000 * 60 * 60);
+                    return hoursSinceActivation < 24;
+                });
+                
+                localStorage.setItem('lastCheck', today);
+                saveGameState();
+            }
+            
+            // Check again at midnight
+            const now = new Date();
+            const tomorrow = new Date(now.getFullYear(), now.getMonth(), now.getDate() + 1);
+            const msUntilMidnight = tomorrow - now;
+            setTimeout(checkDailyReset, msUntilMidnight);
+        }
+        
+        // Utility Functions
+        function getToday() {
+            return new Date().toISOString().split('T')[0];
+        }
+        
+        function getYesterday() {
+            const yesterday = new Date();
+            yesterday.setDate(yesterday.getDate() - 1);
+            return yesterday.toISOString().split('T')[0];
+        }
+        
+        function getDateString(date) {
+            return date.toISOString().split('T')[0];
+        }
+    </script>
+</body>
+</html>
