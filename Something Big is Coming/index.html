@@ -1,0 +1,1420 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Shivam — Height-First Daily Checklist (PWA)</title>
+    <meta name="theme-color" content="#FF7A00" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&display=swap"
+      rel="stylesheet"
+    />
+    <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/lottie-web/5.9.6/lottie.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <style>
+      :root {
+        color-scheme: light;
+      }
+      body {
+        font-family: "Inter", system-ui, -apple-system, BlinkMacSystemFont,
+          "Segoe UI", sans-serif;
+        background: #0b2545;
+      }
+      .glass {
+        backdrop-filter: blur(12px);
+        background: rgba(255, 255, 255, 0.12);
+        border: 1px solid rgba(255, 255, 255, 0.12);
+      }
+      .card {
+        background: #f7f8fa;
+        border-radius: 20px;
+        box-shadow: 0 14px 35px rgba(0, 0, 0, 0.12);
+      }
+      .ripple {
+        position: relative;
+        overflow: hidden;
+      }
+      .ripple::after {
+        content: "";
+        position: absolute;
+        inset: 0;
+        background: radial-gradient(
+          circle,
+          rgba(255, 122, 0, 0.35) 0%,
+          rgba(255, 122, 0, 0) 60%
+        );
+        opacity: 0;
+        transition: opacity 0.35s;
+      }
+      .ripple:active::after {
+        opacity: 1;
+        transition: opacity 0.45s;
+      }
+      .progress-ring {
+        width: 120px;
+        height: 120px;
+      }
+      .checkbox {
+        width: 24px;
+        height: 24px;
+        border-radius: 12px;
+        border: 2px solid #0b2545;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        transition: all 0.25s ease;
+      }
+      .checkbox.checked {
+        background: #1fa65a;
+        border-color: #1fa65a;
+        transform: scale(1.05);
+        color: white;
+      }
+      .pill {
+        border-radius: 999px;
+        padding: 6px 12px;
+        display: inline-flex;
+        align-items: center;
+        font-weight: 600;
+      }
+      .glow {
+        box-shadow: 0 0 0 6px rgba(255, 122, 0, 0.18);
+      }
+      .slide-up {
+        animation: slideUp 0.45s ease;
+      }
+      @keyframes slideUp {
+        from {
+          transform: translateY(18px);
+          opacity: 0;
+        }
+        to {
+          transform: translateY(0);
+          opacity: 1;
+        }
+      }
+      .flip {
+        transition: transform 0.5s ease;
+        transform-style: preserve-3d;
+      }
+      .flip.done {
+        transform: rotateX(360deg);
+      }
+      .parallax {
+        background: linear-gradient(135deg, #ff7a00, #0b2545 70%);
+        color: white;
+      }
+      .floating {
+        animation: float 4s ease-in-out infinite;
+      }
+      @keyframes float {
+        0% {
+          transform: translateY(0);
+        }
+        50% {
+          transform: translateY(-6px);
+        }
+        100% {
+          transform: translateY(0);
+        }
+      }
+      .timer-bar {
+        height: 6px;
+        background: linear-gradient(90deg, #ff7a00, #1fa65a);
+        animation: pulse 2s infinite alternate;
+      }
+      @keyframes pulse {
+        from {
+          filter: saturate(0.7);
+        }
+        to {
+          filter: saturate(1.2);
+        }
+      }
+    </style>
+  </head>
+  <body class="text-[#22222A]">
+    <div
+      id="app"
+      class="min-h-screen bg-gradient-to-b from-[#0B2545] to-[#0B2545]/90 pb-28"
+    >
+      <header
+        class="parallax p-6 rounded-b-3xl shadow-xl relative overflow-hidden"
+      >
+        <div class="absolute right-3 top-3 w-20 h-20" id="mascot"></div>
+        <div class="flex items-center justify-between">
+          <div>
+            <p class="uppercase tracking-[0.2em] text-sm">
+              SHIVAM — HEIGHT FIRST. EVERY DAY.
+            </p>
+            <h1 class="text-3xl font-extrabold leading-tight">
+              Height-First Daily Checklist
+            </h1>
+            <p class="text-sm opacity-80">
+              English / हिन्दी ready · PWA installable
+            </p>
+          </div>
+          <div class="progress-ring relative flex items-center justify-center">
+            <svg class="absolute inset-0" viewBox="0 0 120 120">
+              <circle
+                cx="60"
+                cy="60"
+                r="52"
+                stroke="rgba(255,255,255,0.25)"
+                stroke-width="12"
+                fill="none"
+              ></circle>
+              <circle
+                id="progressCircle"
+                cx="60"
+                cy="60"
+                r="52"
+                stroke="#FF7A00"
+                stroke-width="12"
+                fill="none"
+                stroke-linecap="round"
+                stroke-dasharray="326"
+                stroke-dashoffset="326"
+                transform="rotate(-90 60 60)"
+              ></circle>
+            </svg>
+            <div class="text-center">
+              <p class="text-xs">Today</p>
+              <p id="progressPct" class="text-xl font-bold">0%</p>
+            </div>
+          </div>
+        </div>
+        <div class="mt-4 flex gap-3 flex-wrap">
+          <div class="pill bg-white/15 text-white text-sm">
+            Delhi warrior vibes
+          </div>
+          <div class="pill bg-[#FF7A00] text-[#0B2545] text-sm">
+            Offline-ready PWA
+          </div>
+          <div class="pill bg-[#1FA65A] text-white text-sm">
+            Height-first logic
+          </div>
+        </div>
+      </header>
+
+      <main class="p-4 space-y-4">
+        <section class="card p-4 slide-up">
+          <div class="flex items-center justify-between">
+            <div>
+              <h2 class="text-xl font-bold" data-i18n="today">Today</h2>
+              <p class="text-sm text-gray-600" id="todayDate"></p>
+            </div>
+            <button
+              id="tiredBtn"
+              class="ripple bg-[#0B2545] text-white px-4 py-2 rounded-xl font-semibold shadow-lg hover:scale-[1.01] active:scale-95 transition"
+            >
+              I’m tired / थका हूँ
+            </button>
+          </div>
+          <div class="mt-3 grid grid-cols-3 gap-2 text-xs">
+            <div
+              class="bg-[#FF7A00]/10 border border-[#FF7A00]/40 rounded-xl p-3"
+            >
+              <p class="font-semibold text-sm">Streak</p>
+              <p id="streak" class="text-2xl font-bold">0🔥</p>
+              <p class="text-[11px] text-gray-600">Posture + sleep combo</p>
+            </div>
+            <div
+              class="bg-[#1FA65A]/10 border border-[#1FA65A]/40 rounded-xl p-3"
+            >
+              <p class="font-semibold text-sm">Sleep</p>
+              <p id="sleepStat" class="text-2xl font-bold">--</p>
+              <p class="text-[11px] text-gray-600">Last 24h</p>
+            </div>
+            <div
+              class="bg-[#0B2545]/10 border border-[#0B2545]/30 rounded-xl p-3"
+            >
+              <p class="font-semibold text-sm">Protein</p>
+              <p id="proteinStat" class="text-2xl font-bold">--</p>
+              <p class="text-[11px] text-gray-600">Yesterday</p>
+            </div>
+          </div>
+        </section>
+
+        <section class="grid gap-3" id="todaySections"></section>
+
+        <section class="card p-4 space-y-3">
+          <div class="flex items-center justify-between">
+            <div>
+              <h3 class="font-bold text-lg">Calendar & Phases</h3>
+              <p class="text-sm text-gray-600">
+                150 days · Height-first scheduling
+              </p>
+            </div>
+            <span class="pill bg-[#FF7A00]/10 text-[#FF7A00]"
+              >Phase timeline</span
+            >
+          </div>
+          <div
+            id="calendar"
+            class="grid grid-cols-2 gap-2 max-h-64 overflow-y-auto"
+          ></div>
+          <div
+            id="dayDetail"
+            class="bg-white rounded-xl p-3 border border-gray-100 hidden"
+          ></div>
+        </section>
+
+        <section class="card p-4 space-y-3">
+          <div class="flex justify-between items-center">
+            <div>
+              <h3 class="font-bold text-lg">Logbook / Photos</h3>
+              <p class="text-sm text-gray-600">
+                Sleep, calories, symptoms, photos
+              </p>
+            </div>
+            <button
+              id="exportPdf"
+              class="ripple bg-[#FF7A00] text-white px-3 py-2 rounded-xl text-sm"
+            >
+              Export PDF
+            </button>
+          </div>
+          <form id="logForm" class="grid grid-cols-2 gap-3 text-sm">
+            <label class="flex flex-col"
+              >Sleep hrs<input
+                required
+                min="0"
+                max="14"
+                step="0.5"
+                name="sleep"
+                type="number"
+                class="mt-1 border rounded-lg p-2"
+            /></label>
+            <label class="flex flex-col"
+              >Calories<input
+                required
+                min="0"
+                max="5000"
+                name="calories"
+                type="number"
+                class="mt-1 border rounded-lg p-2"
+            /></label>
+            <label class="flex flex-col"
+              >Protein (g)<input
+                required
+                min="0"
+                max="200"
+                name="protein"
+                type="number"
+                class="mt-1 border rounded-lg p-2"
+            /></label>
+            <label class="flex flex-col"
+              >Mood<select name="mood" class="mt-1 border rounded-lg p-2">
+                <option>🔥 Beast</option>
+                <option>😀 Good</option>
+                <option>😐 Meh</option>
+                <option>🥱 Tired</option>
+                <option>🤒 Sick</option>
+              </select></label
+            >
+            <label class="flex flex-col col-span-2"
+              >Symptoms<input
+                name="symptoms"
+                placeholder="Fever? Sore throat?"
+                class="mt-1 border rounded-lg p-2"
+            /></label>
+            <label class="flex flex-col col-span-2"
+              >Notes<textarea
+                name="notes"
+                class="mt-1 border rounded-lg p-2"
+                rows="2"
+              ></textarea>
+            </label>
+            <button
+              class="ripple bg-[#1FA65A] text-white rounded-xl py-2 font-semibold col-span-2"
+            >
+              Save log
+            </button>
+          </form>
+          <div
+            id="logList"
+            class="space-y-2 max-h-40 overflow-y-auto text-sm"
+          ></div>
+        </section>
+
+        <section class="card p-4 space-y-3">
+          <div class="flex justify-between items-center">
+            <div>
+              <h3 class="font-bold text-lg">Settings</h3>
+              <p class="text-sm text-gray-600">
+                Language, reminders, Delhi specifics
+              </p>
+            </div>
+            <select id="langToggle" class="border rounded-lg p-2 text-sm">
+              <option value="en">English</option>
+              <option value="hi">हिन्दी</option>
+            </select>
+          </div>
+          <div class="grid gap-2 text-sm">
+            <label class="flex items-center justify-between"
+              >AQI (manual)
+              <input
+                id="aqiInput"
+                type="number"
+                class="border rounded-lg p-2 w-24"
+                placeholder="150"
+            /></label>
+            <label class="flex items-center justify-between"
+              >Sunlight preference<select
+                id="sunPref"
+                class="border rounded-lg p-2 w-32"
+              >
+                <option value="morning">Morning</option>
+                <option value="evening">Evening</option>
+              </select></label
+            >
+            <label class="flex items-center justify-between"
+              >Budget protein mode<input
+                id="budgetToggle"
+                type="checkbox"
+                class="w-5 h-5"
+            /></label>
+            <label class="flex items-center justify-between"
+              >Notifications<input
+                id="notifyBtn"
+                type="button"
+                value="Enable"
+                class="ripple bg-[#0B2545] text-white px-3 py-2 rounded-lg"
+            /></label>
+            <button
+              id="studyTimerBtn"
+              class="ripple bg-[#1FA65A] text-white py-2 rounded-lg"
+            >
+              Start 30/3 study-break timer
+            </button>
+          </div>
+          <div id="sunlightTip" class="text-xs text-gray-600"></div>
+        </section>
+
+        <section class="card p-4 space-y-2">
+          <h3 class="font-bold text-lg">
+            Delhi Grocery Fast List (₹500 priority)
+          </h3>
+          <div class="flex flex-wrap gap-2 text-sm" id="groceryList"></div>
+        </section>
+
+        <section class="card p-4 space-y-3">
+          <div class="flex items-center justify-between">
+            <div>
+              <h3 class="font-bold text-lg">Help & Resources</h3>
+              <p class="text-sm text-gray-600">
+                FAQs · Why you get sick · Tired protocol
+              </p>
+            </div>
+            <button
+              id="shareBtn"
+              class="ripple bg-[#0B2545] text-white px-3 py-2 rounded-lg text-sm"
+            >
+              Share today to WhatsApp
+            </button>
+          </div>
+          <details class="border rounded-lg p-3 bg-white">
+            <summary class="font-semibold">Why I got sick?</summary>
+            <p class="text-sm mt-2">
+              Likely sleep debt + high intensity. Today switch to recovery:
+              hydration, easy protein, posture only.
+            </p>
+          </details>
+          <details class="border rounded-lg p-3 bg-white">
+            <summary class="font-semibold">What to do when tired?</summary>
+            <p class="text-sm mt-2">
+              Tap the Tired button. We’ll auto build a 12h safe plan and
+              reschedule heavy work.
+            </p>
+          </details>
+          <details class="border rounded-lg p-3 bg-white">
+            <summary class="font-semibold">Height realism notes</summary>
+            <p class="text-sm mt-2">
+              Consistency in sleep, posture, decompression beats rare intense
+              days.
+            </p>
+          </details>
+        </section>
+      </main>
+
+      <nav
+        class="fixed bottom-0 inset-x-0 bg-white shadow-2xl py-3 px-6 flex justify-around text-sm font-semibold"
+      >
+        <button class="navBtn text-[#FF7A00]" data-target="today">Today</button>
+        <button class="navBtn" data-target="calendar">Calendar</button>
+        <button class="navBtn" data-target="log">Logbook</button>
+        <button class="navBtn" data-target="settings">Settings</button>
+        <button class="navBtn" data-target="help">Help</button>
+      </nav>
+    </div>
+
+    <!-- Onboarding Modal -->
+    <div
+      id="onboarding"
+      class="fixed inset-0 bg-black/70 backdrop-blur-lg flex items-center justify-center p-4 z-50"
+    >
+      <div class="bg-white rounded-2xl p-5 w-full max-w-md space-y-3">
+        <h2 class="text-2xl font-bold">Welcome, Shivam!</h2>
+        <p class="text-sm text-gray-600">
+          Quick 3-step setup. We’ll generate 150 days with height-first safety.
+        </p>
+        <label class="flex flex-col text-sm"
+          >Phase start date<input
+            type="date"
+            id="startDate"
+            class="border rounded-lg p-2 mt-1"
+        /></label>
+        <label class="flex flex-col text-sm"
+          >Height (cm) & Weight (kg)<input
+            type="text"
+            id="bodyStats"
+            placeholder="e.g., 172 cm / 58 kg"
+            class="border rounded-lg p-2 mt-1"
+        /></label>
+        <label class="flex flex-col text-sm"
+          >Target bedtime<select
+            id="bedTime"
+            class="border rounded-lg p-2 mt-1"
+          >
+            <option>22:30</option>
+            <option>23:00</option>
+            <option>22:00</option>
+          </select></label
+        >
+        <label class="flex items-center gap-2 text-sm"
+          ><input type="checkbox" id="illnessFlag" class="w-4 h-4" />History of
+          getting sick when training hard</label
+        >
+        <button
+          id="startProgram"
+          class="ripple bg-[#FF7A00] text-white w-full py-3 rounded-xl font-bold"
+        >
+          Generate my 150-day plan
+        </button>
+        <p class="text-xs text-gray-500 text-center">
+          Data is local-only unless you opt-in for sync.
+        </p>
+      </div>
+    </div>
+
+    <!-- Tired Modal -->
+    <div
+      id="tiredModal"
+      class="fixed inset-0 bg-black/70 hidden items-center justify-center p-4 z-50"
+    >
+      <div class="bg-white rounded-2xl p-5 w-full max-w-lg space-y-3">
+        <div class="flex justify-between items-start">
+          <div>
+            <h3 class="text-xl font-bold">
+              Feeling low? We’ll protect the gains.
+            </h3>
+            <p class="text-sm text-gray-600">
+              12-hour safety plan · Hindi + English
+            </p>
+          </div>
+          <button id="closeTired" class="text-gray-500">✕</button>
+        </div>
+        <div class="flex flex-wrap gap-2 text-sm" id="symptoms">
+          <label class="pill bg-gray-100"
+            ><input type="checkbox" value="fever" class="mr-2" />Fever /
+            बुखार</label
+          >
+          <label class="pill bg-gray-100"
+            ><input type="checkbox" value="throat" class="mr-2" />Sore
+            throat</label
+          >
+          <label class="pill bg-gray-100"
+            ><input type="checkbox" value="stomach" class="mr-2" />Stomach
+            upset</label
+          >
+          <label class="pill bg-gray-100"
+            ><input type="checkbox" value="fatigue" class="mr-2" />Very
+            fatigued</label
+          >
+        </div>
+        <div class="grid grid-cols-2 gap-2 text-sm">
+          <label class="flex flex-col"
+            >Sleep last 24h<input
+              id="tiredSleep"
+              type="number"
+              min="0"
+              max="14"
+              step="0.5"
+              class="border rounded-lg p-2"
+          /></label>
+          <label class="flex flex-col"
+            >Calories yesterday<input
+              id="tiredCals"
+              type="number"
+              min="0"
+              max="5000"
+              class="border rounded-lg p-2"
+          /></label>
+          <label class="flex flex-col"
+            >Protein yesterday (g)<input
+              id="tiredProtein"
+              type="number"
+              min="0"
+              max="200"
+              class="border rounded-lg p-2"
+          /></label>
+          <label class="flex flex-col"
+            >Last workout hrs ago<input
+              id="tiredWorkoutAgo"
+              type="number"
+              min="0"
+              max="96"
+              class="border rounded-lg p-2"
+          /></label>
+        </div>
+        <button
+          id="genPlan"
+          class="ripple bg-[#1FA65A] text-white w-full py-3 rounded-xl font-bold"
+        >
+          Generate 12h plan
+        </button>
+        <div
+          id="planOutput"
+          class="space-y-2 text-sm max-h-60 overflow-y-auto"
+        ></div>
+        <div class="text-xs text-gray-600">
+          Why this? Sleep drives GH; calories + protein protect immunity; rest
+          reduces cortisol. Height micro-tasks stay no matter what.
+        </div>
+        <div class="flex gap-2">
+          <button
+            id="followPlan"
+            class="ripple bg-[#FF7A00] text-white flex-1 py-2 rounded-lg font-semibold"
+          >
+            Follow this plan
+          </button>
+          <button
+            id="rescheduleBtn"
+            class="ripple bg-[#0B2545] text-white flex-1 py-2 rounded-lg font-semibold"
+          >
+            Reschedule my workout
+          </button>
+        </div>
+        <button
+          id="coachSOS"
+          class="ripple w-full bg-[#D62828] text-white py-2 rounded-lg font-semibold"
+        >
+          Coach SOS (WhatsApp)
+        </button>
+      </div>
+    </div>
+
+    <script>
+      // Manifest creation
+      (function () {
+        const manifest = {
+          name: "Shivam — Height-First Daily Checklist",
+          short_name: "Height-First",
+          start_url: "./",
+          display: "standalone",
+          background_color: "#0B2545",
+          theme_color: "#FF7A00",
+          icons: [
+            {
+              src: "https://cdn-icons-png.flaticon.com/512/2421/2421051.png",
+              sizes: "192x192",
+              type: "image/png",
+            },
+            {
+              src: "https://cdn-icons-png.flaticon.com/512/2421/2421051.png",
+              sizes: "512x512",
+              type: "image/png",
+            },
+          ],
+        };
+        const blob = new Blob([JSON.stringify(manifest)], {
+          type: "application/json",
+        });
+        const link = document.createElement("link");
+        link.rel = "manifest";
+        link.href = URL.createObjectURL(blob);
+        document.head.appendChild(link);
+      })();
+      // Service worker registration (inline)
+      if ("serviceWorker" in navigator) {
+        const swCode = `const CACHE='shivam-pwa-v1';const ASSETS=['./'];self.addEventListener('install',e=>{e.waitUntil(caches.open(CACHE).then(c=>c.addAll(ASSETS)).then(()=>self.skipWaiting()));});self.addEventListener('activate',e=>{e.waitUntil(caches.keys().then(keys=>Promise.all(keys.filter(k=>k!==CACHE).map(k=>caches.delete(k)))));});self.addEventListener('fetch',e=>{if(e.request.method!=='GET')return;e.respondWith(caches.match(e.request).then(r=>r||fetch(e.request).then(res=>{const copy=res.clone();caches.open(CACHE).then(c=>c.put(e.request,copy));return res;}).catch(()=>r)));});`;
+        const blob = new Blob([swCode], { type: "application/javascript" });
+        const swURL = URL.createObjectURL(blob);
+        navigator.serviceWorker.register(swURL);
+      }
+
+      // State
+      const phases = [
+        {
+          name: "Phase 1",
+          days: 30,
+          color: "#FF7A00",
+          template: {
+            food: [
+              "Breakfast — Oats + milk + PB + banana",
+              "Lunch — 3 rotis + sabji + dal + curd",
+              "Snack — Milkshake (banana+PB)",
+              "Dinner — Roti + paneer/soya 50–75g",
+              "Bed — Warm milk + turmeric",
+            ],
+            height: [
+              "Morning posture 5–10min (Cat-Cow, Cobra, Tilts)",
+              "Dead hang 2×20–25s gentle",
+              "Sunlight 15min 7:00–9:00 or 16:30–18:30",
+              "Sleep protocol: screens off 21:30, lights off 22:30",
+            ],
+            workout: [
+              "Mini: Glute bridges ×15",
+              "Bird-dog ×12/side",
+              "Plank 20–25s",
+              "Hydration 3L",
+            ],
+          },
+        },
+        {
+          name: "Phase 2",
+          days: 60,
+          color: "#1FA65A",
+          template: {
+            food: [
+              "+Protein: 90–100g target",
+              "Breakfast — Moong cheela + paneer",
+              "Lunch — 3–4 rotis + black chana + curd",
+              "Snack — Sprouts bowl / milkshake",
+              "Dinner — Tofu/soya 80–100g + rice",
+            ],
+            height: [
+              "Dead hang 3×25–30s (AM & PM)",
+              "Posture set 2×/day incl. hip-flexor & hamstrings",
+              "Sunlight 15–20min morning preferred",
+              "Sleep watch + weekly weigh-in",
+            ],
+            workout: [
+              "Day A: Assisted pull-up neg 3×5",
+              "Push-ups 3×8",
+              "Squats 3×12",
+              "Rest 48h same muscle",
+            ],
+          },
+        },
+        {
+          name: "Phase 3",
+          days: 60,
+          color: "#0B2545",
+          template: {
+            food: [
+              "Calories 2500–2800; protein 100–120g",
+              "Breakfast — Paratha + curd + paneer",
+              "Lunch — Rajma chawal + salad",
+              "Snack — Sprouts chaat / roasted chana",
+              "Dinner — Tofu curry 100g / paneer 120g + roti",
+            ],
+            height: [
+              "Dead hang 2×30–45s",
+              "Full posture flow 12min daily",
+              "Sunset 15min sunlight / Vit D if AQI high",
+              "Sleep score daily + posture photos",
+            ],
+            workout: [
+              "Full-body controlled: Pull-ups 4×AMRAP",
+              "Push-ups 4×AMRAP",
+              "Lunges 3×12",
+              "Plank 3×45s",
+              "Rest 48–72h heavy",
+            ],
+          },
+        },
+      ];
+
+      let state = {
+        startDate: null,
+        days: [],
+        logs: [],
+        lang: "en",
+        streak: 0,
+        aqi: null,
+        sunPref: "morning",
+        budget: false,
+      };
+
+      const translations = {
+        today: { en: "Today", hi: "आज" },
+        streak: { en: "Streak", hi: "स्ट्रिक" },
+        sleep: { en: "Sleep", hi: "नींद" },
+        protein: { en: "Protein", hi: "प्रोटीन" },
+        tired: { en: "I’m tired", hi: "थका हूँ" },
+      };
+
+      function t(key) {
+        return translations[key]
+          ? translations[key][state.lang] || translations[key].en
+          : key;
+      }
+
+      function save() {
+        localStorage.setItem("hf_state", JSON.stringify(state));
+      }
+      function load() {
+        const raw = localStorage.getItem("hf_state");
+        if (raw) {
+          state = JSON.parse(raw);
+        }
+      }
+
+      function daysBetween(start, date) {
+        const ms = 24 * 3600 * 1000;
+        return Math.floor((date - start) / ms) + 1;
+      }
+
+      function generateProgram() {
+        const start = new Date(state.startDate);
+        state.days = [];
+        let dayIndex = 1;
+        phases.forEach((phase) => {
+          for (let i = 0; i < phase.days; i++) {
+            const obj = buildDay(dayIndex, phase);
+            state.days.push(obj);
+            dayIndex++;
+          }
+        });
+      }
+
+      function buildDay(dayNumber, phase) {
+        const rand = Math.random();
+        const food = [...phase.template.food];
+        if (rand > 0.6 && phase.name === "Phase 1")
+          food.push("Bonus: Curd + roasted chana (easy protein)");
+        const height = [...phase.template.height];
+        if (rand > 0.5) height.push("Micro walk 8–10min, tall spine");
+        const workout = [...phase.template.workout];
+        return {
+          dayNumber,
+          phase: phase.name,
+          section: { food, height, workout },
+          completed: { food: [], height: [], workout: [] },
+        };
+      }
+
+      function renderToday() {
+        const todayEl = document.getElementById("todaySections");
+        todayEl.innerHTML = "";
+        if (!state.startDate) return;
+        const now = new Date();
+        const dayNumber = daysBetween(new Date(state.startDate), now);
+        const day = state.days[Math.min(dayNumber - 1, state.days.length - 1)];
+        document.getElementById(
+          "todayDate"
+        ).textContent = `Day ${dayNumber} · ${day.phase}`;
+        ["food", "height", "workout"].forEach((section) => {
+          const items = day.section[section];
+          const card = document.createElement("div");
+          card.className = "card p-4";
+          card.innerHTML = `<div class="flex justify-between items-center mb-2"><div><p class="text-xs uppercase text-gray-500">${section.toUpperCase()}</p><h4 class="text-lg font-bold">${
+            section === "food"
+              ? "Fuel / खाना"
+              : section === "height"
+              ? "Height / स्पाइन"
+              : "Workout / व्यायाम"
+          }</h4></div><span class="pill text-xs" style="background:${
+            section === "food" ? "#FF7A00" : "#1FA65A"
+          }10;color:${section === "food" ? "#FF7A00" : "#1FA65A"}">${
+            day.phase
+          }</span></div>`;
+          const list = document.createElement("div");
+          list.className = "space-y-2";
+          items.forEach((task, idx) => {
+            const done = day.completed[section].includes(idx);
+            const row = document.createElement("div");
+            row.className =
+              "flex items-start gap-2 bg-white p-3 rounded-xl border border-gray-100 flip" +
+              (done ? " done" : "");
+            row.innerHTML = `<div class="checkbox ${done ? "checked" : ""}">${
+              done ? "✔" : ""
+            }</div><div class="flex-1"><p class="font-semibold text-sm">${task}</p><div class="timer-bar mt-1"></div></div>`;
+            row.addEventListener("click", () =>
+              toggleTask(dayNumber, section, idx, row)
+            );
+            list.appendChild(row);
+          });
+          card.appendChild(list);
+          todayEl.appendChild(card);
+        });
+        updateProgress(dayNumber);
+      }
+
+      function toggleTask(dayNumber, section, idx, row) {
+        const day = state.days[dayNumber - 1];
+        const list = day.completed[section];
+        const found = list.indexOf(idx);
+        if (found > -1) {
+          list.splice(found, 1);
+        } else {
+          list.push(idx);
+          row.classList.add("done");
+        }
+        row.querySelector(".checkbox").classList.toggle("checked");
+        row.querySelector(".checkbox").innerText = list.includes(idx)
+          ? "✔"
+          : "";
+        save();
+        updateProgress(dayNumber);
+        calcStreak();
+      }
+
+      function updateProgress(dayNumber) {
+        const day = state.days[dayNumber - 1];
+        const total =
+          day.section.food.length +
+          day.section.height.length +
+          day.section.workout.length;
+        const done =
+          day.completed.food.length +
+          day.completed.height.length +
+          day.completed.workout.length;
+        const pct = Math.round((done / total) * 100);
+        const circle = document.getElementById("progressCircle");
+        const dash = 326 - (326 * pct) / 100;
+        circle.style.strokeDashoffset = dash;
+        document.getElementById("progressPct").textContent = pct + "%";
+      }
+
+      function renderCalendar() {
+        const cal = document.getElementById("calendar");
+        cal.innerHTML = "";
+        state.days.forEach((day) => {
+          const btn = document.createElement("button");
+          btn.className =
+            "ripple text-left border rounded-xl p-2 text-sm bg-white";
+          btn.innerHTML = `<div class="flex justify-between"><span class="font-bold">Day ${
+            day.dayNumber
+          }</span><span class="pill" style="background:${
+            day.phase === "Phase 1" ? "#FF7A00" : "#1FA65A"
+          }20;color:${
+            day.phase === "Phase 1"
+              ? "#FF7A00"
+              : day.phase === "Phase 2"
+              ? "#1FA65A"
+              : "#0B2545"
+          }">${day.phase}</span></div><p class="text-xs text-gray-600">${
+            day.section.food[0]
+          }</p>`;
+          btn.addEventListener("click", () => showDayDetail(day));
+          cal.appendChild(btn);
+        });
+      }
+
+      function showDayDetail(day) {
+        const box = document.getElementById("dayDetail");
+        box.classList.remove("hidden");
+        box.innerHTML = `<h4 class="font-bold text-lg mb-1">Day ${day.dayNumber} · ${day.phase}</h4>`;
+        ["food", "height", "workout"].forEach((s) => {
+          const list = day.section[s]
+            .map((x) => `<li class='text-sm'>${x}</li>`)
+            .join("");
+          box.innerHTML += `<div class='mb-2'><p class='font-semibold text-sm uppercase text-gray-500'>${s}</p><ul class='list-disc ml-4 space-y-1'>${list}</ul></div>`;
+        });
+      }
+
+      function renderLogs() {
+        const wrap = document.getElementById("logList");
+        wrap.innerHTML = "";
+        state.logs
+          .slice(-20)
+          .reverse()
+          .forEach((log) => {
+            const div = document.createElement("div");
+            div.className = "bg-white border rounded-xl p-2";
+            div.innerHTML = `<div class='flex justify-between text-xs'><span>${
+              log.date
+            }</span><span>${log.mood}</span></div><p class='text-sm'>Sleep ${
+              log.sleep
+            }h · ${log.calories} kcal · ${
+              log.protein
+            }g</p><p class='text-xs text-gray-600'>${log.symptoms || ""}</p>`;
+            wrap.appendChild(div);
+          });
+        const last = state.logs[state.logs.length - 1];
+        document.getElementById("sleepStat").textContent = last
+          ? `${last.sleep}h`
+          : "--";
+        document.getElementById("proteinStat").textContent = last
+          ? `${last.protein}g`
+          : "--";
+      }
+
+      function calcStreak() {
+        const today = new Date();
+        let streak = 0;
+        for (let i = state.logs.length - 1; i >= 0; i--) {
+          const logDate = new Date(state.logs[i].date);
+          const diff = daysBetween(logDate, today);
+          if (diff === 1 + streak) {
+            streak++;
+          } else if (diff > 1 + streak) {
+            break;
+          }
+        }
+        state.streak = streak;
+        document.getElementById("streak").textContent = `${streak}🔥`;
+        save();
+      }
+
+      // Tired Plan
+      function generatePlan() {
+        const severe =
+          [...document.querySelectorAll("#symptoms input:checked")].filter(
+            (el) => ["fever", "stomach"].includes(el.value)
+          ).length > 0;
+        const fatigueChecked = document.querySelector(
+          '#symptoms input[value="fatigue"]'
+        )?.checked;
+        const sleep = Number(document.getElementById("tiredSleep").value || 0);
+        const cals = Number(document.getElementById("tiredCals").value || 0);
+        const protein = Number(
+          document.getElementById("tiredProtein").value || 0
+        );
+        const workoutAgo = Number(
+          document.getElementById("tiredWorkoutAgo").value || 99
+        );
+        const now = new Date();
+        let timeline = [];
+        if (severe) {
+          timeline.push({
+            time: "Now",
+            text: "Full rest. Hydrate 500ml + ORS. Consult doctor if fever persists.",
+            cal: 0,
+            pro: 0,
+          });
+          timeline.push({
+            time: addHours(now, 2),
+            text: "Milk + banana + peanut butter (immune support)",
+            cal: 350,
+            pro: 15,
+          });
+          timeline.push({
+            time: addHours(now, 6),
+            text: "Re-check symptoms. No exercise.",
+            cal: 0,
+            pro: 0,
+          });
+        } else {
+          if (sleep < 7) {
+            timeline.push({
+              time: "Now",
+              text: "Nap 45–90 min. Dark room.",
+              cal: 0,
+              pro: 0,
+            });
+            timeline.push({
+              time: addMinutes(now, 90),
+              text: "Hydrate 400ml + salt squeeze",
+              cal: 0,
+              pro: 0,
+            });
+          }
+          if (cals < 1800) {
+            timeline.push({
+              time: addMinutes(now, 10),
+              text: "High-cal smoothie: milk+banana+PB",
+              cal: 400,
+              pro: 18,
+            });
+          }
+          if (protein < 80) {
+            timeline.push({
+              time: addMinutes(now, 30),
+              text: "Add 1 bowl curd + roasted chana",
+              cal: 220,
+              pro: 15,
+            });
+          }
+          const hangTime = fatigueChecked ? "2×20s" : "2×30s";
+          timeline.push({
+            time: addMinutes(now, 60),
+            text: `Height first: dead hang ${hangTime} + 8-min posture flow`,
+            cal: 0,
+            pro: 0,
+          });
+          if (workoutAgo < 24) {
+            timeline.push({
+              time: addHours(now, 4),
+              text: "No heavy training. Light walk 10 min only.",
+              cal: 80,
+              pro: 0,
+            });
+            timeline.push({
+              time: addHours(now, 8),
+              text: "Reschedule workout to +48h window.",
+              cal: 0,
+              pro: 0,
+            });
+          } else {
+            timeline.push({
+              time: addHours(now, 4),
+              text: "Optional micro-workout 10–12 min (posture focus)",
+              cal: 100,
+              pro: 0,
+            });
+          }
+          timeline.push({
+            time: addHours(now, 10),
+            text: "Dinner: roti + paneer/soya 80–100g",
+            cal: 550,
+            pro: 35,
+          });
+          timeline.push({
+            time: addHours(now, 12),
+            text: "Screens off 21:30 · Sleep 22:30",
+            cal: 0,
+            pro: 0,
+          });
+        }
+        const out = document.getElementById("planOutput");
+        out.innerHTML = timeline
+          .map(
+            (item) =>
+              `<div class='flex items-start gap-2 bg-[#F7F8FA] p-2 rounded-lg'><input type='checkbox' class='mt-1'><div><p class='text-xs text-gray-500'>${formatTime(
+                item.time
+              )}</p><p class='font-semibold text-sm'>${
+                item.text
+              }</p><p class='text-[11px] text-gray-600'>~${item.cal} kcal · ${
+                item.pro
+              } g protein</p></div></div>`
+          )
+          .join("");
+        return timeline;
+      }
+
+      function addMinutes(date, min) {
+        return new Date(date.getTime() + min * 60000);
+      }
+      function addHours(date, h) {
+        return addMinutes(date, h * 60);
+      }
+      function formatTime(t) {
+        if (typeof t === "string") return t;
+        return t.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
+      }
+
+      function autoReschedule() {
+        const today = new Date();
+        state.days.forEach((day) => {
+          if (
+            day.dayNumber > daysBetween(new Date(state.startDate), today) &&
+            day.phase.includes("Phase")
+          ) {
+            if (!day.section.workout.includes("Rescheduled safe session")) {
+              day.section.workout.push(
+                "Rescheduled safe session (from tired day)"
+              );
+            }
+          }
+        });
+        save();
+        renderCalendar();
+      }
+
+      // Grocery list
+      const grocery = [
+        "Paneer",
+        "Soya chunks",
+        "Peanuts",
+        "Rajma",
+        "Chole",
+        "Black chana",
+        "Tofu",
+        "Oats",
+        "Bananas",
+        "Curd",
+        "Milk",
+        "Sprouts",
+        "Roasted chana",
+        "Lassi",
+      ];
+      function renderGrocery() {
+        const wrap = document.getElementById("groceryList");
+        wrap.innerHTML = "";
+        grocery.forEach((item) => {
+          const tag = document.createElement("button");
+          tag.className = "ripple px-3 py-2 rounded-full border text-xs";
+          tag.textContent = item;
+          tag.addEventListener("click", () =>
+            tag.classList.toggle("bg-[#FF7A00]/10")
+          );
+          wrap.appendChild(tag);
+        });
+      }
+
+      // Notifications
+      function enableNotifs() {
+        if (!("Notification" in window))
+          return alert("Notifications not supported");
+        Notification.requestPermission().then((p) => {
+          if (p === "granted") {
+            scheduleLocalAlerts();
+          }
+        });
+      }
+      function scheduleLocalAlerts() {
+        const msgs = [
+          "Morning posture!",
+          "Breakfast protein check",
+          "Dead-hang reminder",
+          "Sleep protocol 21:30",
+        ];
+        msgs.forEach((msg, i) => {
+          setTimeout(() => {
+            new Notification(msg, {
+              body: "Height-first routine",
+              icon: "https://cdn-icons-png.flaticon.com/512/2421/2421051.png",
+            });
+          }, 2000 * (i + 1));
+        });
+      }
+
+      // Study timer 30/3
+      let studyInterval = null;
+      function startStudyTimer() {
+        if (studyInterval) clearInterval(studyInterval);
+        let mins = 30 * 60;
+        studyInterval = setInterval(() => {
+          mins--;
+          if (mins % 180 === 0) {
+            navigator.vibrate?.(200);
+            alert("Stand, stretch 3 min or dead-hang!");
+          }
+          if (mins <= 0) {
+            clearInterval(studyInterval);
+            alert("Session done. Walk + hydrate.");
+          }
+        }, 1000);
+      }
+
+      // Export to PDF
+      async function exportPDF() {
+        const { jsPDF } = window.jspdf;
+        const doc = new jsPDF();
+        doc.text("Shivam — Height-First Log (weekly)", 10, 10);
+        state.logs.slice(-7).forEach((log, i) => {
+          doc.text(
+            `${log.date}: Sleep ${log.sleep}h | ${log.calories} kcal | ${log.protein}g | Mood ${log.mood}`,
+            10,
+            20 + 6 * i
+          );
+        });
+        doc.save("height-first-log.pdf");
+      }
+
+      // Share
+      function shareToday() {
+        const now = new Date();
+        const dayNumber = daysBetween(new Date(state.startDate), now);
+        const day = state.days[dayNumber - 1];
+        const text = `Day ${dayNumber} (${
+          day.phase
+        }) checklist:\nFood: ${day.section.food.join(
+          "; "
+        )}\nHeight: ${day.section.height.join(
+          "; "
+        )}\nWorkout: ${day.section.workout.join("; ")}`;
+        const url = `https://wa.me/?text=${encodeURIComponent(text)}`;
+        window.open(url, "_blank");
+      }
+      function coachSOS() {
+        const now = new Date().toLocaleString();
+        const last = state.logs[state.logs.length - 1] || {};
+        const text = `Coach SOS — ${now}\nMood:${last.mood || "NA"}\nSleep:${
+          last.sleep || "?"
+        }h\nSymptoms:${last.symptoms || "NA"}`;
+        window.open(
+          `https://wa.me/?text=${encodeURIComponent(text)}`,
+          "_blank"
+        );
+      }
+
+      // Language
+      function applyLang() {
+        document.querySelector('[data-i18n="today"]').textContent = t("today");
+        save();
+      }
+
+      // Onboarding
+      function initOnboarding() {
+        const startInput = document.getElementById("startDate");
+        startInput.value = new Date().toISOString().split("T")[0];
+        document
+          .getElementById("startProgram")
+          .addEventListener("click", () => {
+            state.startDate = startInput.value;
+            state.lang = document.getElementById("langToggle").value;
+            state.aqi = Number(document.getElementById("aqiInput").value || 0);
+            state.sunPref = document.getElementById("sunPref").value;
+            state.budget = document.getElementById("budgetToggle").checked;
+            generateProgram();
+            save();
+            renderToday();
+            renderCalendar();
+            document.getElementById("onboarding").classList.add("hidden");
+          });
+      }
+
+      // Sunlight tip
+      function updateSunlightTip() {
+        const aqi = Number(
+          document.getElementById("aqiInput").value || state.aqi || 0
+        );
+        const pref = document.getElementById("sunPref").value;
+        let tip = `Prefer ${pref} sunlight 15–20 min. Delhi AQI: ${
+          aqi || "N/A"
+        }.`;
+        if (aqi > 200)
+          tip += " AQI high — balcony with mask or Vit D supplement.";
+        document.getElementById("sunlightTip").textContent = tip;
+      }
+
+      // Lottie
+      function initLottie() {
+        lottie.loadAnimation({
+          container: document.getElementById("mascot"),
+          renderer: "svg",
+          loop: true,
+          autoplay: true,
+          path: "https://assets6.lottiefiles.com/packages/lf20_cgqhglfa.json",
+        });
+      }
+
+      // Audio cue
+      function playCue() {
+        const ctx = new (window.AudioContext || window.webkitAudioContext)();
+        const osc = ctx.createOscillator();
+        osc.type = "sine";
+        osc.frequency.value = 880;
+        osc.connect(ctx.destination);
+        osc.start();
+        setTimeout(() => {
+          osc.stop();
+          ctx.close();
+        }, 250);
+      }
+
+      // Navigation scroll
+      function setupNav() {
+        const sections = {
+          today: 0,
+          calendar: 600,
+          log: 1200,
+          settings: 1600,
+          help: 2000,
+        };
+        document.querySelectorAll(".navBtn").forEach((btn) =>
+          btn.addEventListener("click", () => {
+            window.scrollTo({
+              top: sections[btn.dataset.target] || 0,
+              behavior: "smooth",
+            });
+          })
+        );
+      }
+
+      // Event listeners
+      window.addEventListener("DOMContentLoaded", () => {
+        load();
+        initOnboarding();
+        initLottie();
+        renderGrocery();
+        applyLang();
+        setupNav();
+        if (state.startDate) {
+          document.getElementById("onboarding").classList.add("hidden");
+          renderToday();
+          renderCalendar();
+          renderLogs();
+          calcStreak();
+        }
+        document.getElementById("logForm").addEventListener("submit", (e) => {
+          e.preventDefault();
+          const data = new FormData(e.target);
+          const log = {
+            date: new Date().toISOString().split("T")[0],
+            sleep: Number(data.get("sleep")),
+            calories: Number(data.get("calories")),
+            protein: Number(data.get("protein")),
+            mood: data.get("mood"),
+            symptoms: data.get("symptoms"),
+            notes: data.get("notes"),
+          };
+          state.logs.push(log);
+          save();
+          renderLogs();
+          calcStreak();
+          playCue();
+        });
+        document
+          .getElementById("langToggle")
+          .addEventListener("change", (e) => {
+            state.lang = e.target.value;
+            applyLang();
+          });
+        document.getElementById("aqiInput").addEventListener("input", () => {
+          state.aqi = Number(event.target.value);
+          updateSunlightTip();
+        });
+        document
+          .getElementById("sunPref")
+          .addEventListener("change", updateSunlightTip);
+        document
+          .getElementById("budgetToggle")
+          .addEventListener("change", (e) => {
+            state.budget = e.target.checked;
+          });
+        document
+          .getElementById("notifyBtn")
+          .addEventListener("click", enableNotifs);
+        document
+          .getElementById("studyTimerBtn")
+          .addEventListener("click", startStudyTimer);
+        document
+          .getElementById("tiredBtn")
+          .addEventListener("click", () =>
+            document.getElementById("tiredModal").classList.remove("hidden")
+          );
+        document
+          .getElementById("closeTired")
+          .addEventListener("click", () =>
+            document.getElementById("tiredModal").classList.add("hidden")
+          );
+        document.getElementById("genPlan").addEventListener("click", () => {
+          generatePlan();
+        });
+        document
+          .getElementById("rescheduleBtn")
+          .addEventListener("click", () => {
+            autoReschedule();
+            alert("Workout moved safely.");
+          });
+        document
+          .getElementById("followPlan")
+          .addEventListener("click", () =>
+            alert("Plan locked. Focus on rest + height.")
+          );
+        document.getElementById("coachSOS").addEventListener("click", coachSOS);
+        document
+          .getElementById("shareBtn")
+          .addEventListener("click", shareToday);
+        document
+          .getElementById("exportPdf")
+          .addEventListener("click", exportPDF);
+        document
+          .getElementById("planOutput")
+          .addEventListener("change", (e) => {
+            if (e.target.type === "checkbox" && e.target.checked) playCue();
+          });
+        updateSunlightTip();
+      });
+    </script>
+  </body>
+</html>
